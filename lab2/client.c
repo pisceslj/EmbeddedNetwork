@@ -81,12 +81,10 @@ int main(int argc,char *argv[])
 	while(strcmp(sendbuf,"exit"))
 	{
 		memset(sendbuf, 0, BUFFER_LENGTH);     //清零
-		//printf("Client IP %s and port %d:\n",inet_ntoa(server_addr.sin_addr),ntohs(server_addr.sin_port));
-		
 		if(strcmp(recvbuf,"") != 0)
 			printf("Client send:");
 		gets(sendbuf);                         //获取buf值
-		//fgets(sendbuf,BUFFER_LENGTH,stdin);
+
 		n = sendto(socketfd,&sendbuf,sizeof(sendbuf),0,(struct sockaddr*)&server_addr,addr_len);
 		if(n == -1)
 		{

@@ -98,7 +98,6 @@ int main(int argc,char *argv[])
 		sendbuf[n] = '\0';
 		
 		gets(sendbuf);
-		//fgets(sendbuf,sizeof(sendbuf),stdin);
 		n = sendto(socketfd,&sendbuf,sizeof(sendbuf),0,(struct sockaddr*)&client_addr,sizeof(client_addr));
 		if(n == -1)
 		{
