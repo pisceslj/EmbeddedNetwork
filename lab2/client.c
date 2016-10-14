@@ -14,7 +14,8 @@
 
 int n;
 int flag = 0;
-char buf[BUFFER_LENGTH];
+char sendbuf[BUFFER_LENGTH];
+char recvbuf[BUFFER_LENGTH];
 int socketfd;
 socklen_t addr_len;
 struct sockaddr_in server_addr;
@@ -24,7 +25,7 @@ void* recvThread(void *arg)
 {
 	while(!flag)
 	{ 
-		n = recvfrom(socketfd,&buf,sizeof(buf),0,(struct sockaddr*)&server_addr,&addr_len);
+		n = recvfrom(socketfd,&recvbuf,BUFFER_LENGTH,0,(struct sockaddr*)&server_addr,&addr_len);
 		if (n == -1)
 		{
 			perror("接收失败\n");
@@ -32,9 +33,9 @@ void* recvThread(void *arg)
 		}
 		else
 		{
-			buf[n] = '\0';
-			printf("Client recv: %s\n", buf);
-			if(!strcmp(buf,"exit"))
+			recvbuf[n] = '\0';
+			printf("Client recv: %s\n", recvbuf);
+			if(!strcmp(recvbuf,"exit"))
 			{
 				flag = 1;
 			}
@@ -69,28 +70,25 @@ int main(int argc,char *argv[])
 	server_addr.sin_addr.s_addr = inet_addr(argv[1]);
 	server_addr.sin_port = htons(atoi(argv[2]));
 	
-	//发送数据
-	if(sendto(socketfd,&buf,sizeof(buf),0,(struct sockaddr*)&server_addr,addr_len) < 0)
-	{
-		perror("sendto");
-		exit(-1);
-	}	
-	
 	//创建线程
 	if(pthread_create(&recv_thr_id, NULL, recvThread, NULL) != 0)
 	{
 		printf("Create Thread ERROR!!\n");
-		exit(1);
+		exit(-1);
 	}
 
 	//循环监听
-	while(strcmp(buf,"exit"))
+	while(strcmp(sendbuf,"exit"))
 	{
-		memset(buf, 0, BUFFER_LENGTH);     //清零
-		printf("Client send:");
-		gets(buf);                         //获取buf值
-		//fgets(buf,BUFFER_LENGTH,stdin);
-		if(sendto(socketfd,&buf,sizeof(buf),0,(struct sockaddr*)&server_addr,addr_len) < 0)
+		memset(sendbuf, 0, BUFFER_LENGTH);     //清零
+		//printf("Client IP %s and port %d:\n",inet_ntoa(server_addr.sin_addr),ntohs(server_addr.sin_port));
+		
+		if(strcmp(recvbuf,"") != 0)
+			printf("Client send:");
+		gets(sendbuf);                         //获取buf值
+		//fgets(sendbuf,BUFFER_LENGTH,stdin);
+		n = sendto(socketfd,&sendbuf,sizeof(sendbuf),0,(struct sockaddr*)&server_addr,addr_len);
+		if(n == -1)
 		{
 			perror("sendto failed");
 			exit(-1);
@@ -104,7 +102,7 @@ int main(int argc,char *argv[])
 		perror("close socket failed");
 		exit(-1);
 	}
-	puts("TCP客户端已关闭\n");
+	puts("UDP客户端已关闭\n");
 	
 	return 0;
 }

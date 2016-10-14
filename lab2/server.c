@@ -16,7 +16,8 @@ int n;
 int flag = 0;
 int socketfd;
 socklen_t addr_len;
-char buf[BUFFER_LENGTH];
+char sendbuf[BUFFER_LENGTH];
+char recvbuf[BUFFER_LENGTH];
 struct sockaddr_in server_addr,client_addr;
 
 //创建接收线程
@@ -24,16 +25,18 @@ void* recvThread(void *arg)
 {
 	while(!flag)
 	{ 
-		n = recvfrom(socketfd,&buf,sizeof(buf),0,(struct sockaddr*)&client_addr,&addr_len);
-		if (n == -1){
+		n = recvfrom(socketfd,&recvbuf,sizeof(recvbuf),0,(struct sockaddr*)&client_addr,&addr_len);
+		printf("\nClient IP is %s and port is %d\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+		if (n == -1)
+		{
 			perror("接收失败\n");
-			exit(1);
+			exit(-1);
 		}
 		else
 		{
-			buf[n] = '\0';
-			printf("Server recv: %s\n", buf);
-			if(!strcmp(buf,"exit"))
+			recvbuf[n] = '\0';
+			printf("The Messages are: %s\n", recvbuf);
+			if(!strcmp(recvbuf,"exit"))
 			{ 
 				flag = 1;
 			}
@@ -45,7 +48,7 @@ void* recvThread(void *arg)
 		perror("关闭套接字失败");
 		exit(1);
 	}
-	puts("TCP服务端已关闭\n");
+	puts("UDP服务端已关闭\n");
 	exit(0);
 } 
 
@@ -89,18 +92,20 @@ int main(int argc,char *argv[])
 	}
 	
 	//循环监听
-	while(strcmp(buf,"exit") && !flag)
+	while(strcmp(recvbuf,"exit") && !flag)
 	{
-		memset(buf,0,BUFFER_LENGTH);
-		buf[n] = '\0';
-		printf("Server send:");
-		//fgets(buf,BUFFER_LENGTH,stdin);
-		gets(buf);
-		if(sendto(socketfd,&buf,sizeof(buf),0,(struct sockaddr*)&server_addr,sizeof(server_addr)) < 0)
+		memset(sendbuf,0,BUFFER_LENGTH);
+		sendbuf[n] = '\0';
+		
+		gets(sendbuf);
+		//fgets(sendbuf,sizeof(sendbuf),stdin);
+		n = sendto(socketfd,&sendbuf,sizeof(sendbuf),0,(struct sockaddr*)&client_addr,sizeof(client_addr));
+		if(n == -1)
 		{
 			perror("sendto");
 			exit(-1);
 		}
+		
 	}
 	
 	return 0;
