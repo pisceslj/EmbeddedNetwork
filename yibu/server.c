@@ -27,17 +27,20 @@
             perror("socket");  
             exit(errno);  
         }else  
-            printf("socket create success!\n");  
+            printf("socket create success!\n"); 
+             
         /*设置服务器端口*/      
         if(argv[2])  
             port = atoi(argv[2]);  
         else  
             port = 4567;  
+            
         /*设置侦听队列长度*/  
         if(argv[3])  
             listnum = atoi(argv[3]);  
         else  
             listnum = 3;  
+            
         /*设置服务器ip*/  
         bzero(&s_addr, sizeof(s_addr));  
         s_addr.sin_family = AF_INET;  
@@ -46,6 +49,7 @@
             s_addr.sin_addr.s_addr = inet_addr(argv[1]);  
         else  
             s_addr.sin_addr.s_addr = INADDR_ANY;  
+            
         /*把地址和端口帮定到套接字上*/  
         if((bind(sockfd, (struct sockaddr*) &s_addr,sizeof(struct sockaddr))) == -1){  
             perror("bind");  
@@ -58,6 +62,8 @@
             exit(errno);      
         }else  
             printf("the server is listening!\n");  
+            
+            
         while(1){  
             printf("*****************聊天开始***************\n");  
             len = sizeof(struct sockaddr);  
@@ -65,7 +71,8 @@
                 perror("accept");          
                 exit(errno);  
             }else  
-                printf("正在与您聊天的客户端是：%s: %d\n",inet_ntoa(c_addr.sin_addr),ntohs(c_addr.sin_port));  
+                printf("正在与您聊天的客户端是：%s: %d\n",inet_ntoa(c_addr.sin_addr),ntohs(c_addr.sin_port));
+                  
             while(1){  
                 /*把可读文件描述符的集合清空*/  
                 FD_ZERO(&rfds);  
@@ -85,12 +92,13 @@
                 if(retval == -1){  
                     printf("select出错，与该客户端连接的程序将退出\n");  
                     break;  
-                }else if(retval == 0){  
+                }/*else if(retval == 0){  
                     printf("服务器没有任何输入信息，并且客户端也没有信息到来，waiting...\n");  
                     continue;  
-                }else{  
+                }*/else{  
                     /*用户输入信息了,开始处理信息并发送*/  
-                    if(FD_ISSET(0, &rfds)){  
+                    if(FD_ISSET(0, &rfds))
+                    {  
                     _retry:  
                         /******发送消息*******/  
                         bzero(buf,BUFLEN);  

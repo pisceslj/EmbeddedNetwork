@@ -68,10 +68,10 @@
             if(retval == -1){  
                 printf("select出错，客户端程序退出\n");  
                 break;  
-            }else if(retval == 0){  
+            }/*else if(retval == 0){  
                 printf("客户端没有任何输入信息，并且服务器也没有信息到来，waiting...\n");  
                 continue;  
-            }else{  
+            }*/else{  
                 /*服务器发来了消息*/  
                 if(FD_ISSET(sockfd,&rfds)){  
                     /******接收消息*******/  
