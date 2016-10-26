@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/select.h>
 #define BUFFER_LENGTH 1024
 #define SERV_PORT 3001
 #define LISTENQ  10  
@@ -17,7 +18,6 @@ int main(int argc, char const *argv[])
 	char recvbuf[BUFFER_LENGTH];
 	fd_set allset,rset;
 	int n = 0,i = 0;
-	int flag = 0;
 	int retval,maxfd;
 	pid_t pid;
 	struct sockaddr_in server_addr, client_addr;  //定义服务器端和客户端地址变量
@@ -69,127 +69,87 @@ int main(int argc, char const *argv[])
 		}
 		else
 		{
-			/*用户输入信息，开始处理信息并发送*/
+			/*命令行输入信息，开始处理信息*/
 			if(FD_ISSET(0,&rset))
 			{		
 				gets(sendbuf);
-				printf("enter");
 				if(!strcmp(sendbuf,"exit"))
 				{
-					//flag = 1;
-					printf("close ok2\n");
-					if(close(connfd) == -1)
-					{
+					if(close(listenfd) == -1)
+					{	
 						perror("close failed");
 						exit(-1);
-					}
-					//_exit(0);
+					} 
+					printf("\nserver 已退出!\n");
 					break;
 				}
 			}
 			
 			if(FD_ISSET(listenfd,&rset))
 			{
-				while(1)
+				if((connfd = accept(listenfd,(struct sockaddr*)&client_addr,&client_addr_len)) == -1)
 				{
-					if((connfd = accept(listenfd,(struct sockaddr*)&client_addr,&client_addr_len)) == -1)
+					perror("accept");
+					exit(-1);
+				}
+				printf("\n加入聊天的客户端是：%s: %d\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+				//创建进程
+				if((pid=fork()) > 0)//父进程
+				{
+					if(close(connfd) == -1)
 					{
-						perror("accept");
+						perror("close failed");
 						exit(-1);
 					}
-					printf("\n加入聊天的客户端是：%s: %d\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
-					maxfd = connfd > maxfd ? connfd:maxfd;//设置当前最大描述符为
-					FD_SET(connfd,&allset);//将新建套接字加入集合
-					
-					//创建进程
-					if((pid=fork()) > 0)//父进程
+				}
+				else if(pid == 0) //子进程
+				{	
+					/*关闭服务器的套接字*/ 
+				 	if(close(listenfd) == -1)
+					{	
+						perror("close failed");
+						exit(-1);
+					} 
+				 	while(1)
 					{
-						if(close(connfd) == -1)
+						memset(recvbuf,0,BUFFER_LENGTH);
+						n = recv(connfd,recvbuf,BUFFER_LENGTH,0);
+						if(n < 0)
 						{
-							perror("close failed");
+							perror("recv failed");
 							exit(-1);
 						}
-						/*用户输入信息，开始处理信息并发送*/
-						if(FD_ISSET(0,&rset))
-						{		
-							gets(sendbuf);
-							printf("enter");
-							if(!strcmp(sendbuf,"exit"))
-							{
-								//flag = 1;
-								printf("close ok2\n");
-								if(close(connfd) == -1)
-								{
-									perror("close failed");
-									exit(-1);
-								}
-								_exit(0);
-								//break;
-							}
-						}
-						continue;
-					}
-					else if(pid == 0) //子进程
-					{	
-						if(FD_ISSET(connfd,&allset))
+						recvbuf[n] = '\0';
+						if(!strcmp(recvbuf,"exit"))
 						{
-							/*关闭服务器的套接字*/ 
-	       					 	if(close(listenfd) == -1)
-							{	
-								perror("close failed");
-								exit(-1);
-							} 
-	       					 	while(1)
+							if(close(connfd) == -1)
 							{
-								memset(recvbuf,0,BUFFER_LENGTH);
-								n = recv(connfd,recvbuf,BUFFER_LENGTH,0);
-								if(n < 0)
-								{
-									perror("recv failed");
-									exit(-1);
-								}
-								recvbuf[n] = '\0';
-								if(!strcmp(recvbuf,"exit"))
-								{
-									if(close(connfd) == -1)
-									{
-										perror("failed to close");
-										exit(-1);
-									}
-									FD_CLR(connfd,&allset);//清除集合中对应的connfd
-									printf("close ok\n");
-									//flag = 1;
-									_exit(0);
-								}
-								else
-								{
-									printf("\n正参与聊天的客户端是：%s: %d\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
-									printf("server recv:%s\n",recvbuf);
-									n = send(connfd,recvbuf,sizeof(recvbuf),0);
-									if(n < 0)
-									{
-										perror("send failed");
-										exit(-1);
-									}				
-								}
+								perror("failed to close");
+								exit(-1);
 							}
+							_exit(0);//退出子进程
+						}
+						else
+						{
+							printf("\n正参与聊天的客户端是：%s: %d\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+							printf("server recv:%s\n",recvbuf);
+							n = send(connfd,recvbuf,sizeof(recvbuf),0);
+							if(n < 0)
+							{
+								perror("send failed");
+								exit(-1);
+							}				
 						}
 					}
-					else
-					{
-						perror("fork failed");
-						exit(-1);
-					}
+				}
+				else
+				{
+					perror("fork failed");
+					exit(-1);
 				}
 			}	
 		}
 	}//while结束处 
-	if(close(listenfd) == -1)
-	{	
-		perror("close failed");
-		exit(-1);
-	} 
-	printf("server 退出!\n");
           
 	return 0;    
 }
