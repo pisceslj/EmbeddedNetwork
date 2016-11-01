@@ -24,7 +24,7 @@ int main(int argc, char const *argv[])
 	int listenfd; //定义监听fd
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
 	
-	//创建套接字
+	//创建监听套接字
 	if((listenfd = socket(AF_INET,SOCK_STREAM,0)) == -1)
 	{
 		perror("套接字创建失败\n");
@@ -87,12 +87,13 @@ int main(int argc, char const *argv[])
 			
 			if(FD_ISSET(listenfd,&rset))
 			{
+				//接收用户请求，创建连接套接字
 				if((connfd = accept(listenfd,(struct sockaddr*)&client_addr,&client_addr_len)) == -1)
 				{
 					perror("accept");
 					exit(-1);
 				}
-				printf("\n加入聊天的客户端是：%s: %d\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+				printf("\n客户端：%s: %d 加入聊天\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
 				//创建进程
 				if((pid=fork()) > 0)//父进程
 				{
@@ -104,12 +105,13 @@ int main(int argc, char const *argv[])
 				}
 				else if(pid == 0) //子进程
 				{	
-					/*关闭服务器的套接字*/ 
+					/*关闭服务器的监听套接字*/ 
 				 	if(close(listenfd) == -1)
 					{	
 						perror("close failed");
 						exit(-1);
-					} 
+					}
+					//开始收发信息 
 				 	while(1)
 					{
 						memset(recvbuf,0,BUFFER_LENGTH);
@@ -127,6 +129,7 @@ int main(int argc, char const *argv[])
 								perror("failed to close");
 								exit(-1);
 							}
+							printf("\n客户端：%s: %d 退出\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
 							_exit(0);//退出子进程
 						}
 						else
